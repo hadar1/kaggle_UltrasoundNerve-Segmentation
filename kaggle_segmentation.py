@@ -5,7 +5,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 #import cv2
 from PIL import Image
-from skimage.transform import resize
+#from skimage.transform import resize
 from sklearn.model_selection import train_test_split
 from keras.models import Model, Input, load_model
 from keras.layers import Input
@@ -23,6 +23,7 @@ from keras import backend as K
 
 
 def dice_coef(y_true, y_pred):
+    smooth=1
     y_true_f = K.flatten(y_true)
     y_pred_f = K.flatten(y_pred)
     intersection = K.sum(y_true_f * y_pred_f)
@@ -35,8 +36,8 @@ def dice_coef_loss(y_true, y_pred):
 
 def get_data():
     K.set_image_data_format('channels_last')
-    print(os.listdir("../input"))
-    path = "../input/train/"
+    print(os.listdir("input"))
+    path = "input/train/"
     file_list = os.listdir(path)
     file_list[:20]
     reg = re.compile("[0-9]+")
@@ -45,7 +46,7 @@ def get_data():
     temp2 = list(map(lambda x: reg.match(x.split("_")[1]).group(), file_list))
     temp2 = list(map(int, temp2))
     file_list = [x for _, _, x in sorted(zip(temp1, temp2, file_list))]
-    file_list[:20]
+    file_list=file_list[:400]
     train_image = []
     train_mask = []
     for idx, item in enumerate(file_list):
@@ -57,11 +58,7 @@ def get_data():
     image1 = np.array(Image.open(path + "1_1.tif"))
     image1_mask = np.array(Image.open(path + "1_1_mask.tif"))
     image1_mask = np.ma.masked_where(image1_mask == 0, image1_mask)
-    fig, ax = plt.subplots(1, 3, figsize=(16, 12))
-    ax[0].imshow(image1, cmap='gray')
-    ax[1].imshow(image1_mask, cmap='gray')
-    ax[2].imshow(image1, cmap='gray', interpolation='none')
-    ax[2].imshow(image1_mask, cmap='jet', interpolation='none', alpha=0.7)
+
     X = []
     y = []
     for image, mask in zip(train_image, train_mask):
@@ -69,7 +66,7 @@ def get_data():
         y.append(np.array(Image.open(path + mask)))
     X = np.array(X)
     y = np.array(y)
-    mask_df = pd.read_csv("../input/train_masks.csv")
+    mask_df = pd.read_csv("input/train_masks.csv")
     mask_df.head()
     # Randomly choose the indices of data used to train our model.
     indices = np.random.choice(range(len(train_image)), replace=False, size=100)
@@ -84,11 +81,12 @@ def get_data():
         # mask = plt.imread("../input/train/" + mask_path)
         image = Image.open("input/train/" + image_path)
         mask = Image.open("input/train/" + mask_path)
-        image.thumbnail((IMG_HEIGHT, IMG_WIDTH), Image.ANTIALIAS)
-        mask.thumbnail((IMG_HEIGHT, IMG_WIDTH), Image.ANTIALIAS)
 
-        X[i] = image
-        y[i] = mask
+        image=image.resize((IMG_HEIGHT, IMG_WIDTH), Image.BICUBIC)
+        mask=mask.resize((IMG_HEIGHT, IMG_WIDTH), Image.BICUBIC)
+
+        X[i] = np.array(image)
+        y[i] = np.array(mask)
     X = X[:, :, :, np.newaxis] / 255
     y = y[:, :, :, np.newaxis] / 255
     print("X shape : ", X.shape)

@@ -153,10 +153,11 @@ def main():
     test_list[:15]
 
     X_test = np.empty((len(test_list), IMG_HEIGHT, IMG_WIDTH), dtype='float32')
-    for i, item in enumerate(test_list):
-        image = cv2.imread("../input/test/" + item, 0)
-        image = cv2.resize(image, (IMG_HEIGHT, IMG_WIDTH), interpolation=cv2.INTER_AREA)
-        X_test[i] = image
+    for i, image_path in enumerate(test_list):
+        image = Image.open("input/test/" + image_path)
+        image = image.resize((IMG_HEIGHT, IMG_WIDTH), Image.BICUBIC)
+        X_test[i] = np.array(image)
+
     X_test = X_test[:, :, :, np.newaxis] / 255
 
     y_pred = model.predict(X_test)

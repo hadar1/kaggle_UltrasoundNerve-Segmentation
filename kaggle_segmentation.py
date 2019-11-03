@@ -111,13 +111,6 @@ def conv_transpose_blocks(conv, conv2, filter):
 
 
 
-def main():
-    X,y,IMG_HEIGHT, IMG_WIDTH = get_data()
-
-    model = get_model(IMG_HEIGHT, IMG_WIDTH)
-
-    results = model.fit(X, y, validation_split=0.1, batch_size=4, epochs=20)
-
 def get_model(IMG_HEIGHT, IMG_WIDTH):
     smooth = 1.
     inputs = Input((IMG_HEIGHT, IMG_WIDTH, 1))
@@ -136,5 +129,38 @@ def get_model(IMG_HEIGHT, IMG_WIDTH):
     model.compile(optimizer=Adam(lr=1e-4), loss=dice_coef_loss, metrics=[dice_coef])
     return model
 
+
+
+
+def main():
+    X,y,IMG_HEIGHT, IMG_WIDTH = get_data()
+
+    model = get_model(IMG_HEIGHT, IMG_WIDTH)
+
+    results = model.fit(X, y, validation_split=0.1, batch_size=4, epochs=20)
+
+    sub = pd.read_csv("../input/sample_submission.csv")
+    test_list = os.listdir("../input/test")
+
+    print("The number of test data : ", len(test_list))
+
+    # Sort the test set in ascending order.
+    reg = re.compile("[0-9]+")
+
+    temp1 = list(map(lambda x: reg.match(x).group(), test_list))
+    temp1 = list(map(int, temp1))
+
+    test_list = [x for _, x in sorted(zip(temp1, test_list))]
+
+    test_list[:15]
+
+    X_test = np.empty((len(test_list), IMG_HEIGHT, IMG_WIDTH), dtype='float32')
+    for i, item in enumerate(test_list):
+        image = cv2.imread("../input/test/" + item, 0)
+        image = cv2.resize(image, (IMG_HEIGHT, IMG_WIDTH), interpolation=cv2.INTER_AREA)
+        X_test[i] = image
+    X_test = X_test[:, :, :, np.newaxis] / 255
+
+    y_pred = model.predict(X_test)
 
 main()

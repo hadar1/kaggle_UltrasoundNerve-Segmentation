@@ -5,7 +5,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 #import cv2
 from PIL import Image
-#from skimage.transform import resize
+from skimage.transform import resize
 from sklearn.model_selection import train_test_split
 from keras.models import Model, Input, load_model
 from keras.layers import Input
@@ -127,7 +127,19 @@ def get_model(IMG_HEIGHT, IMG_WIDTH):
     model.compile(optimizer=Adam(lr=1e-4), loss=dice_coef_loss, metrics=[dice_coef])
     return model
 
-
+def run_length_enc(label):
+    from itertools import chain
+    x = label.transpose().flatten()
+    y = np.where(x > 0)[0]
+    if len(y) < 10:  # consider as empty
+        return ''
+    z = np.where(np.diff(y) > 1)[0]
+    start = np.insert(y[z+1], 0, y[0])
+    end = np.append(y[z], y[-1])
+    length = end - start
+    res = [[s+1, l+1] for s, l in zip(list(start), list(length))]
+    res = list(chain.from_iterable(res))
+    return ' '.join([str(r) for r in res])
 
 
 def main():
@@ -135,10 +147,10 @@ def main():
 
     model = get_model(IMG_HEIGHT, IMG_WIDTH)
 
-    results = model.fit(X, y, validation_split=0.1, batch_size=4, epochs=20)
+    results = model.fit(X, y, validation_split=0.1, batch_size=4, epochs=5)
 
-    sub = pd.read_csv("../input/sample_submission.csv")
-    test_list = os.listdir("../input/test")
+    sub = pd.read_csv("input/sample_submission.csv")
+    test_list = os.listdir("input/test")
 
     print("The number of test data : ", len(test_list))
 
@@ -161,5 +173,20 @@ def main():
     X_test = X_test[:, :, :, np.newaxis] / 255
 
     y_pred = model.predict(X_test)
+
+    rles = []
+    for i in range(X_test.shape[0]):
+        img = y_pred[i, :, :, 0]
+        img = img > 0.5
+        img = resize(img, (420, 580), preserve_range=True)
+        rle = run_length_enc(img)
+        rles.append(rle)
+        if i % 100 == 0:
+            print('{}/{}'.format(i, X_test.shape[0]), end="\r")
+
+
+    sub['pixels'] = rles
+    sub.to_csv("submission.csv", index=False)
+
 
 main()

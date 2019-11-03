@@ -133,7 +133,7 @@ def get_model(IMG_HEIGHT, IMG_WIDTH):
     conv9 = conv_transpose_blocks(conv1, conv8, 32)
     conv10 = Conv2D(1, (1, 1), activation='sigmoid')(conv9)
     model = Model(inputs=[inputs], outputs=[conv10])
-    model.compile(optimizer=Adam(lr=1e-5), loss=dice_coef_loss, metrics=[dice_coef])
+    model.compile(optimizer=Adam(lr=1e-4), loss=dice_coef_loss, metrics=[dice_coef])
     return model
 
 
